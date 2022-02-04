@@ -1,0 +1,26 @@
+Const FEED_RATE = 400 
+Const THICKNESS = 8 
+Const OFFSET = 20 
+Const MAX_DEPTH = 25
+Const EPSILON = 0.01
+Const NO_TOUCH_ERROR = "Error"
+
+originFeed = GetOemDRO(818)
+
+Code "F" & FEED_RATE
+
+Code "G31Z" & -MAX_DEPTH
+
+While IsMoving
+Wend
+
+If GetOemDro(802) < -MAX_DEPTH + EPSILON Then
+	Code "(" & NO_TOUCH_ERROR  & ")"
+	Code "G00Z0"
+Else 
+	Call SetDro (2, THICKNESS)  
+	
+	Code "G00Z" & OFFSET       
+End If
+
+Code "F" & originFeed       
