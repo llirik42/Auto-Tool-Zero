@@ -1,26 +1,58 @@
-Const FEED_RATE = 400 
+Const FEED_RATE = 400  
 Const THICKNESS = 8 
 Const OFFSET = 20 
 Const MAX_DEPTH = 25
 Const EPSILON = 0.01
 Const NO_TOUCH_ERROR = "Error"
 
-originFeed = GetOemDRO(818)
 
-Code "F" & FEED_RATE
+Function getCurrentFeedRate() as Double
+	Return GetOemDRO(818)
+End Function
 
-Code "G31Z" & -MAX_DEPTH
+Sub SetFeedRate(feedRate as Integer)
+	Code "F" & (feedRate 
+End Sub
 
-While IsMoving
-Wend
+Sub FastZMove(z as Double)
+	Code "G00Z" & z
+End Sub
 
-If GetOemDro(802) < -MAX_DEPTH + EPSILON Then
-	Code "(" & NO_TOUCH_ERROR  & ")"
-	Code "G00Z0"
-Else 
-	Call SetDro (2, THICKNESS)  
-	
-	Code "G00Z" & OFFSET       
+Sub PrintMessage(message as String)
+	Code "(" & message & ")"
+End Sub
+
+Function GetCurrentZ() as Double
+	Return GetOemDro(802)
+End Function
+
+Sub SetCurrentZ(newZ as Double)
+	Call SetDro (2, newZ)  
+End Sub
+
+Sub MoveZUntillTouchOrReach(z as Double)
+	Code "G31Z" & z
+
+	While IsMoving
+	Wend
+End Sub
+
+
+originFeed = getCurrentFeedRate()
+
+SetFeedRate(FEED_RATE)
+
+MoveZUntillTouchOrReach(-MAX_DEPTH)
+
+currentZ = GetCurrentZ()
+reachedMaxDepth = currentZ < -MAX_DEPTH + EPSILON
+
+If reachedMaxDepth Then
+	call PrintMessage(NO_TOUCH_ERROR)	
+	call FastZMove(0)
+Else
+	call SetCurrentZ(THICKNESS) 
+	call FastZMove(OFFSET)	       
 End If
 
-Code "F" & originFeed       
+call SetFeedRate(originFeed)       
