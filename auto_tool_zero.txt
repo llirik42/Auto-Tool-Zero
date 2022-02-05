@@ -6,7 +6,7 @@ Const EPSILON = 0.01
 Const NO_TOUCH_ERROR = "Error"
 
 Sub PrintMessage(byVal message as String)
-	Code "(" & NO_TOUCH_ERROR  & ")"
+	Code "(" & message & ")"
 End Sub
 
 originFeed = GetOemDRO(818)
