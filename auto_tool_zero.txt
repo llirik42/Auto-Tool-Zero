@@ -5,6 +5,10 @@ Const MAX_DEPTH = 25
 Const EPSILON = 0.01
 Const NO_TOUCH_ERROR = "Error"
 
+Sub PrintMessage(message as String)
+	Code "(" & NO_TOUCH_ERROR  & ")"
+End Sub
+
 originFeed = GetOemDRO(818)
 
 Code "F" & FEED_RATE
@@ -15,7 +19,7 @@ While IsMoving
 Wend
 
 If GetOemDro(802) < -MAX_DEPTH + EPSILON Then
-	Code "(" & NO_TOUCH_ERROR  & ")"
+	call PrintMessage(NO_TOUCH_ERROR)
 	Code "G00Z0"
 Else 
 	Call SetDro (2, THICKNESS)  
