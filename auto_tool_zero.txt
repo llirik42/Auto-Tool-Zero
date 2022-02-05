@@ -40,9 +40,9 @@ End Sub
 
 originFeed = getCurrentFeedRate()
 
-SetFeedRate(FEED_RATE)
+call SetFeedRate(FEED_RATE)
 
-MoveZUntillTouchOrReach(-MAX_DEPTH)
+call MoveZUntillTouchOrReach(-MAX_DEPTH)
 
 currentZ = GetCurrentZ()
 reachedMaxDepth = currentZ < -MAX_DEPTH + EPSILON
