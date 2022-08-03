@@ -1,4 +1,6 @@
-Const EPSILON As Double = 0.01
+Const FEED_RATE As Integer = 400
+
+Const EPSILON As Double = 0.001
 
 Const CURRENT_X_OEM_CODE As Integer = 800
 
@@ -10,104 +12,119 @@ Const CURRENT_FEED_RATE_OEM_CODE As Integer = 818
 
 Const SET_FEED_RATE_CODE As String = "F"
 Const FAST_MODE_CODE As String = "G00"
-const MOVE_UNTILL_TOUCH_OR_REACH_CODE As String = "G31"
+Const MOVE_UNTILL_TOUCH_OR_REACH_CODE As String = "G31"
 
-Const X_SIZE As Double = 50.0
-const Y_SIZE As Double = 60.0
+Const X_SIZE As Double = 30.0
+Const Y_SIZE As Double = 30.0
+Const X_THICKNESS As Double = 15.0
+Const Y_THICKNESS As Double = 15.0
+Const Z_THICKNESS As Double = 8.0
 
-Const X_THICKNESS As Double = 5.0
-Const Y_THICKNESS As Double = 6.0
-Const Z_THICKNESS as Double = 10.0
-
-Const MAX_DEPTH As Double = 50.0
-Const OFFSET as Double = 25.0
+Const MAX_DEPTH As Double = 40.0
+Const OFFSET As Double = 25.0
+Const TOOL_RADIUS As Double = 1.5875
 
 
 Call main()
 
 
 Sub main()
-	originFeedRate = getCurrentFeedRate()
-			
+	originFeedRate = getCurrentFeedRate()		
 	setCurrentFeed(FEED_RATE)
 
-	zTouch = autoZeroZ()
+	startXPosition = getCurrentX()
+	startYPosition = getCurrentY()
+	startZPosition = getCurrentZ()
+	
+	zTouch = autoZeroZ(startZPosition)
 	If zTouch = False Then
-		printNoTouchError("z")
-		moveFastToZ(MAX_DEPTH)
+		setCurrentFeed(originFeedRate)
 		Return
 	End If
 	
-	xTouch = autoZeroX()
+	xTouch = autoZeroX(startXPosition)
 	If xTouch = False Then
-		printNoTouchError("x")
-		moveFastOnX(X_SIZE)
-		moveFastToZ(MAX_DEPTH)
-		moveFastToX(0)
+		setCurrentFeed(originFeedRate)
+		Return
 	End If
-
-	yTouch = autoZeroY()
-	If yTouch = False Then
-		printNoTouchError("y")
-		moveFastOnY(Y_SIZE)
-		moveFastToZ(MAX_DEPTH)
-		moveFastToY(0)
-	End If
-
+		
+	yTouch = autoZeroY(startYPosition)
+	
+	While IsMoving
+	Wend
+	
+	setCurrentZ(OFFSET + Z_THICKNESS)
+	
 	setCurrentFeed(originFeedRate)	
 End Sub
 
 
-Function autoZeroX()
-	moveFastToX(X_SIZE)
-
+Function autoZeroX(ByVal startXPosition As Double) As Boolean
+	moveFastOnX(-X_SIZE)
+	
 	moveFastToZ(-Z_THICKNESS / 2)
-
-	MoveUntillTouchOrReachX(0)
-
-	If isZero(getCurrentX()) Then
-		Return False
+		
+	Sleep 4000
+	
+	moveUntillTouchOrReachX(startXPosition)
+	
+	If isZero(getCurrentX() - startXPosition) Then
+		moveFastOnX(-X_SIZE)
+		moveFastToZ(OFFSET)
+		moveFastToX(startXPosition)
+		printNoTouchError("X")
+		autoZeroX = False
 	Else
-		setCurrentX(X_THICKNESS)
-		moveFastOnX(OFFSET)
+		setCurrentX(-X_THICKNESS - TOOL_RADIUS)
+		moveFastOnX(-OFFSET)
 		moveFastToZ(OFFSET)
 		moveFastToX(0)
+		autoZeroX = True
 	End If
 End Function
 
-Function autoZeroY()
-	moveFastToY(Y_SIZE)
-
+Function autoZeroY(ByVal startYPosition As Double) As Boolean
+	moveFastOnY(-Y_SIZE)
+	
 	moveFastToZ(-Z_THICKNESS / 2)
-
-	MoveUntillTouchOrReachY(0)
-
-	If isZero(getCurrentY()) Then
-		Return False
+		
+	Sleep 6000
+	
+	moveUntillTouchOrReachY(startYPosition)
+	
+	If isZero(getCurrentY() - startYPosition) Then
+		moveFastOnY(-Y_SIZE)
+		moveFastToZ(OFFSET)
+		moveFastToY(startYPosition)
+		printNoTouchError("Y")	
+		autoZeroY = False
 	Else
-		setCurrentY(Y_THICKNESS)
-		moveFastOnY(OFFSET)
+		setCurrentY(-Y_THICKNESS - TOOL_RADIUS)
+		moveFastOnY(-OFFSET)
 		moveFastToZ(OFFSET)
 		moveFastToY(0)
+		autoZeroY = True
 	End If
+
 End Function
 
-Function autoZeroZ() As Boolean
-	MoveUntillTouchOrReachZ(-MAX_DEPTH)
+Function autoZeroZ(ByVal startZPosition As Double) As Boolean			
+	moveUntillTouchOrReachZ(startZPosition - MAX_DEPTH)
 		
-	If reachedMaxDepth() Then
-		moveFastToZ(0)
-		Return False
+	If reachedMaxDepth(startZPosition) Then
+		moveFastToZ(startZPosition)
+		printNoTouchError("Z")
+		autoZeroZ = False
 	Else 
 		setCurrentZ(0)
-		moveFastToZ(LIFT)
-		return True
+		moveFastToZ(OFFSET)
+		autoZeroZ = True
 	End If
 End Function
 
 
-Function reachedMaxDepth()
-	Return isZero(getCurrentZ() - MAX_DEPTH)
+Function reachedMaxDepth(ByVal startZPosition As Double)
+	reachedMaxDepth = isZero(getCurrentZ() - startPozition + MAX_DEPTH)
 End Function
 
 
@@ -119,62 +136,66 @@ Sub moveFastOnY(dy)
 	moveFastToY(getCurrentY() + dy)
 End Sub
 
-
-Sub moveFastToX(to)
-	Code FAST_MODE_CODE & "X" & to
-End Sub
-
-Sub moveFastToY(to)
-	Code FAST_MODE_CODE & "Y" & to
-End Sub
-
-Sub moveFastToZ(to)
-	Code FAST_MODE_CODE & "Z" & to
+Sub moveFastOnZ(dz)
+	moveFastToZ(getCurrentZ() + dz)
 End Sub
 
 
-Sub MoveUntillTouchOrReachX(to As Double)
-	Code MOVE_UNTILL_TOUCH_OR_REACH_CODE & "X" & to
+Sub moveFastToX(xDestination)
+	Code FAST_MODE_CODE & "X" & xDestination
+End Sub
+
+Sub moveFastToY(yDestination)
+	Code FAST_MODE_CODE & "Y" & yDestination
+End Sub
+
+Sub moveFastToZ(zDestination)
+	Code FAST_MODE_CODE & "Z" & zDestination
+End Sub
+
+
+Sub moveUntillTouchOrReachX(xDestination As Double)
+	Code MOVE_UNTILL_TOUCH_OR_REACH_CODE & "X" & xDestination
 	While IsMoving
 	Wend
 End Sub
 
-Sub MoveUntillTouchOrReachY(to as Double)
-	Code MOVE_UNTILL_TOUCH_OR_REACH_CODE & "Y" & to
+Sub moveUntillTouchOrReachY(yDestination As Double)
+	Code MOVE_UNTILL_TOUCH_OR_REACH_CODE & "Y" & yDestination
 	While IsMoving
 	Wend
 End Sub
 
-Sub MoveUntillTouchOrReachZ(to as Double)
-	Code MOVE_UNTILL_TOUCH_OR_REACH_CODE & "Z" & to
+Sub moveUntillTouchOrReachZ(zDestination As Double)
+	Code MOVE_UNTILL_TOUCH_OR_REACH_CODE & "Z" & zDestination
 	While IsMoving
 	Wend
 End Sub
 
 
 Function getCurrentFeedRate()
-	Return GetOEMDRO(CURRENT_FEED_RATE_OEM_CODE)
+	getCurrentFeedRate = GetOEMDRO(CURRENT_FEED_RATE_OEM_CODE)
 End Function
 
-Sub setCurrentFeed(newFeed as Integer)
+Sub setCurrentFeed(newFeed As Integer)
 	Code SET_FEED_RATE_CODE & newFeed
 End Sub
 
 
 Function getCurrentX()
-	Return getCurrentCoordinate(X_COORDINATE_NUMBER)
+	getCurrentX = getCurrentCoordinate(X_COORDINATE_NUMBER)
 End Function
 
 Function getCurrentY()
-	Return getCurrentCoordinate(Y_COORDINATE_NUMBER)
+	getCurrentY = getCurrentCoordinate(Y_COORDINATE_NUMBER)
 End Function
 
 Function getCurrentZ()
-	Return getCurrentCoordinate(Z_COORDINATE_NUMBER)
+	getCurrentZ = getCurrentCoordinate(Z_COORDINATE_NUMBER)
 End Function
 
-Function getCurrentCoordinate(ByVal coordinateNumber as Integer)
-	Return GetOEMDRO(current_X_OEM_CODE + coordinateNumber)
+Function getCurrentCoordinate(ByVal coordinateNumber As Integer)
+	getCurrentCoordinate = GetOEMDRO(current_X_OEM_CODE + coordinateNumber)
 End Function
 
 
@@ -183,7 +204,7 @@ Sub setCurrentX(ByVal newX As Double)
 End Sub
 
 Sub setCurrentY(ByVal newY As Double)
-	SetDro(Y_COORDINATE_NUMBER, newZ)
+	SetDro(Y_COORDINATE_NUMBER, newY)
 End Sub
 
 Sub setCurrentZ(ByVal newZ As Double)
@@ -191,8 +212,8 @@ Sub setCurrentZ(ByVal newZ As Double)
 End Sub
 
 
-Sub printNoTouchError(ByVal coordinate as String)
-	printMessage("No" & coordinate & "touch")
+Sub printNoTouchError(ByVal coordinate As String)
+	printMessage("No " & coordinate & " touch")
 End Sub
 
 Sub printMessage(ByVal message As String)
@@ -200,6 +221,5 @@ Sub printMessage(ByVal message As String)
 End Sub
 
 
-Function isZero(ByVal number As Double)
-	Return (number < EPSILON) and (number > -EPSILON)
-End Function
+Function isZero(ByVal number As Double) As Boolean
+	isZero = (number < EPSILON) And (number > -EPSILON)
